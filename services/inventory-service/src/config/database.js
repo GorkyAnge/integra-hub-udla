@@ -1,0 +1,17 @@
+const { Pool } = require('pg');
+const logger = require('../utils/logger');
+
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL || 'postgresql://integrahub:integrahub123@localhost:5432/integrahub',
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+async function connectDatabase() {
+  const client = await pool.connect();
+  logger.info('Connected to PostgreSQL');
+  client.release();
+}
+
+module.exports = { pool, connectDatabase };

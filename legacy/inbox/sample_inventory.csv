@@ -1,0 +1,4 @@
+sku,name,description,category,price,quantity
+SAMPLE-001,Sample Product 1,This is a sample product for testing,Electronics,99.99,100
+SAMPLE-002,Sample Product 2,Another sample product,Accessories,49.99,200
+SAMPLE-003,Sample Product 3,Third sample product,Electronics,149.99,50

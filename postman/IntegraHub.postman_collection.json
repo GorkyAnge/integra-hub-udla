@@ -1,0 +1,963 @@
+{
+    "info": {
+        "_postman_id": "integrahub-collection-2024",
+        "name": "IntegraHub - Order-to-Cash Platform",
+        "description": "Colección completa para probar el flujo Order-to-Cash de IntegraHub.\n\n## Flujo Típico\n1. Obtener token OAuth2\n2. Crear orden (POST /orders)\n3. Verificar estado (GET /orders/:id)\n4. Consultar por Correlation-ID\n\n## Variables\n- `base_url`: URL del API Gateway\n- `access_token`: Se setea automáticamente al obtener token\n- `correlation_id`: Se setea al crear orden",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost",
+            "type": "string"
+        },
+        {
+            "key": "auth_url",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "order_url",
+            "value": "http://localhost:3001",
+            "type": "string"
+        },
+        {
+            "key": "inventory_url",
+            "value": "http://localhost:3002",
+            "type": "string"
+        },
+        {
+            "key": "payment_url",
+            "value": "http://localhost:3003",
+            "type": "string"
+        },
+        {
+            "key": "notification_url",
+            "value": "http://localhost:3004",
+            "type": "string"
+        },
+        {
+            "key": "analytics_url",
+            "value": "http://localhost:3005",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "order_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "correlation_id",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "🔐 Auth Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{auth_url}}/health",
+                            "host": ["{{auth_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Access Token (Client Credentials)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.access_token) {",
+                                    "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                                    "    console.log('Token saved to collection variables');",
+                                    "}",
+                                    "",
+                                    "pm.test('Token received', function() {",
+                                    "    pm.expect(jsonData.access_token).to.be.a('string');",
+                                    "});",
+                                    "",
+                                    "pm.test('Token type is Bearer', function() {",
+                                    "    pm.expect(jsonData.token_type).to.equal('Bearer');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"grant_type\": \"client_credentials\",\n    \"client_id\": \"integrahub-client\",\n    \"client_secret\": \"integrahub-secret\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{auth_url}}/auth/token",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "token"]
+                        }
+                    }
+                },
+                {
+                    "name": "Validate Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"token\": \"{{access_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{auth_url}}/auth/validate",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "validate"]
+                        }
+                    }
+                },
+                {
+                    "name": "Revoke Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"token\": \"{{access_token}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{auth_url}}/auth/revoke",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "revoke"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{auth_url}}/auth/userinfo",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "userinfo"]
+                        }
+                    }
+                },
+                {
+                    "name": "Error: Invalid Client Credentials",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"grant_type\": \"client_credentials\",\n    \"client_id\": \"invalid-client\",\n    \"client_secret\": \"wrong-secret\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{auth_url}}/auth/token",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "token"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📦 Order Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/health",
+                            "host": ["{{order_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Order (Happy Path)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "pm.collectionVariables.set('idempotency_key', pm.variables.replaceIn('{{$guid}}'));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.order) {",
+                                    "    pm.collectionVariables.set('order_id', jsonData.order.id);",
+                                    "    pm.collectionVariables.set('correlation_id', jsonData.order.correlationId || jsonData.correlationId);",
+                                    "    console.log('Order ID saved:', jsonData.order.id);",
+                                    "}",
+                                    "",
+                                    "pm.test('Order created successfully', function() {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test('Order has correlation ID', function() {",
+                                    "    pm.expect(jsonData.order.correlationId || jsonData.correlationId).to.be.a('string');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{$guid}}"
+                            },
+                            {
+                                "key": "X-Correlation-ID",
+                                "value": "{{$guid}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"customerId\": \"{{$guid}}\",\n    \"customerEmail\": \"test@integrahub.test\",\n    \"customerName\": \"Test Customer\",\n    \"items\": [\n        {\n            \"productId\": \"prod-001\",\n            \"productName\": \"Product A\",\n            \"quantity\": 2,\n            \"unitPrice\": 29.99\n        },\n        {\n            \"productId\": \"prod-002\",\n            \"productName\": \"Product B\",\n            \"quantity\": 1,\n            \"unitPrice\": 49.99\n        }\n    ],\n    \"notes\": \"Test order from Postman\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{order_url}}/api/orders",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Orders by Status (PENDING)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders?status=PENDING",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "PENDING"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/{{order_id}}",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "{{order_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Order by Correlation ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/correlation/{{correlation_id}}",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "correlation", "{{correlation_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Order Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"status\": \"CONFIRMED\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/{{order_id}}/status",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "{{order_id}}", "status"]
+                        }
+                    }
+                },
+                {
+                    "name": "Cancel Order",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/{{order_id}}",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "{{order_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Error: Create Order without Token",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"customerId\": \"{{$guid}}\",\n    \"items\": []\n}"
+                        },
+                        "url": {
+                            "raw": "{{order_url}}/api/orders",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"]
+                        }
+                    }
+                },
+                {
+                    "name": "Error: Create Order with Empty Items",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"customerId\": \"{{$guid}}\",\n    \"customerEmail\": \"test@test.com\",\n    \"items\": []\n}"
+                        },
+                        "url": {
+                            "raw": "{{order_url}}/api/orders",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"]
+                        }
+                    }
+                },
+                {
+                    "name": "Error: Order Not Found",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/00000000-0000-0000-0000-000000000000",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "00000000-0000-0000-0000-000000000000"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📊 Inventory Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventory_url}}/health",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventory_url}}/api/products",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "products"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Product by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventory_url}}/api/products/prod-001",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "products", "prod-001"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Product",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"sku\": \"NEW-PROD-001\",\n    \"name\": \"New Test Product\",\n    \"description\": \"A test product created via API\",\n    \"price\": 99.99,\n    \"quantityAvailable\": 100,\n    \"reservedQuantity\": 0,\n    \"warehouseLocation\": \"A-01-01\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{inventory_url}}/api/products",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "products"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Stock",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"quantityChange\": 50,\n    \"reason\": \"Restock from supplier\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{inventory_url}}/api/products/prod-001/stock",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "products", "prod-001", "stock"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Reservations",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventory_url}}/api/reservations",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "reservations"]
+                        }
+                    }
+                },
+                {
+                    "name": "Low Stock Alert Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{inventory_url}}/api/products?lowStock=true",
+                            "host": ["{{inventory_url}}"],
+                            "path": ["api", "products"],
+                            "query": [
+                                {
+                                    "key": "lowStock",
+                                    "value": "true"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "💳 Payment Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{payment_url}}/health",
+                            "host": ["{{payment_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{payment_url}}/api/transactions",
+                            "host": ["{{payment_url}}"],
+                            "path": ["api", "transactions"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Transaction by Order ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{payment_url}}/api/transactions/order/{{order_id}}",
+                            "host": ["{{payment_url}}"],
+                            "path": ["api", "transactions", "order", "{{order_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Direct Payment (Manual)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"{{order_id}}\",\n    \"correlationId\": \"{{correlation_id}}\",\n    \"amount\": 109.97,\n    \"paymentMethod\": \"credit_card\",\n    \"paymentDetails\": {\n        \"cardLastFour\": \"4242\",\n        \"cardBrand\": \"visa\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{payment_url}}/api/payments",
+                            "host": ["{{payment_url}}"],
+                            "path": ["api", "payments"]
+                        }
+                    }
+                },
+                {
+                    "name": "Refund Transaction",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"transactionId\": \"tx-123\",\n    \"amount\": 50.00,\n    \"reason\": \"Customer request\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{payment_url}}/api/refunds",
+                            "host": ["{{payment_url}}"],
+                            "path": ["api", "refunds"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📧 Notification Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{notification_url}}/health",
+                            "host": ["{{notification_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Recent Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{notification_url}}/api/notifications/recent",
+                            "host": ["{{notification_url}}"],
+                            "path": ["api", "notifications", "recent"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Notification Templates",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{notification_url}}/api/templates",
+                            "host": ["{{notification_url}}"],
+                            "path": ["api", "templates"]
+                        }
+                    }
+                },
+                {
+                    "name": "Send Test Notification",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"type\": \"CUSTOMER\",\n    \"eventType\": \"TEST\",\n    \"orderId\": \"{{order_id}}\",\n    \"recipient\": \"test@integrahub.test\",\n    \"subject\": \"Test Notification\",\n    \"content\": \"This is a test notification from Postman\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{notification_url}}/api/notifications/send",
+                            "host": ["{{notification_url}}"],
+                            "path": ["api", "notifications", "send"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📈 Analytics Service",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/health",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Realtime Metrics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/realtime",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "realtime"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Metrics Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/metrics/summary",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "metrics", "summary"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Daily Metrics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/metrics/daily?days=7",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "metrics", "daily"],
+                            "query": [
+                                {
+                                    "key": "days",
+                                    "value": "7"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Inventory Analytics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/inventory",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "inventory"]
+                        }
+                    }
+                },
+                {
+                    "name": "Trigger ETL Job",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/etl/trigger",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "etl", "trigger"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔄 End-to-End Flow",
+            "item": [
+                {
+                    "name": "1. Get Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.collectionVariables.set('access_token', jsonData.access_token);",
+                                    "pm.test('Token received', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"grant_type\": \"client_credentials\",\n    \"client_id\": \"integrahub-client\",\n    \"client_secret\": \"integrahub-secret\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{auth_url}}/auth/token",
+                            "host": ["{{auth_url}}"],
+                            "path": ["auth", "token"]
+                        }
+                    }
+                },
+                {
+                    "name": "2. Create Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.collectionVariables.set('order_id', jsonData.order.id);",
+                                    "pm.collectionVariables.set('correlation_id', jsonData.order.correlationId || jsonData.correlationId);",
+                                    "",
+                                    "pm.test('Order created', function() {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test('Order has PENDING status', function() {",
+                                    "    pm.expect(jsonData.order.status).to.equal('PENDING');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Idempotency-Key",
+                                "value": "{{$guid}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"customerId\": \"{{$guid}}\",\n    \"customerEmail\": \"e2e-test@integrahub.test\",\n    \"customerName\": \"E2E Test Customer\",\n    \"items\": [\n        {\n            \"productId\": \"prod-001\",\n            \"productName\": \"Laptop Pro 15\",\n            \"quantity\": 1,\n            \"unitPrice\": 1299.99\n        }\n    ],\n    \"notes\": \"E2E test order\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{order_url}}/api/orders",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders"]
+                        }
+                    }
+                },
+                {
+                    "name": "3. Wait & Check Status",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Order found', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "var jsonData = pm.response.json();",
+                                    "console.log('Current status:', jsonData.status);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Wait 2 seconds for async processing",
+                                    "setTimeout(function(){}, 2000);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/{{order_id}}",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "{{order_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Track by Correlation ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Order tracked', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "var jsonData = pm.response.json();",
+                                    "pm.test('Has event timeline', function() {",
+                                    "    pm.expect(jsonData.eventTimeline).to.be.an('array');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{order_url}}/api/orders/correlation/{{correlation_id}}",
+                            "host": ["{{order_url}}"],
+                            "path": ["api", "orders", "correlation", "{{correlation_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "5. Check Analytics",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{analytics_url}}/api/analytics/realtime",
+                            "host": ["{{analytics_url}}"],
+                            "path": ["api", "analytics", "realtime"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
