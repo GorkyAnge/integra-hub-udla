@@ -53,8 +53,8 @@ async function processPayment(data) {
   try {
     logger.info(`Processing payment for order: ${orderId}, amount: ${totalAmount}`);
 
-    // Simulate payment processing (80% success rate for demo)
-    const isSuccessful = Math.random() > 0.2;
+    // Simulate payment processing (50% success rate for demo - increased failure for testing)
+    const isSuccessful = Math.random() > 0.5;
     const gatewayReference = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Create transaction record
