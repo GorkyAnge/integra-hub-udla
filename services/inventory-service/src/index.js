@@ -118,7 +118,7 @@ async function processInventoryReservation(data) {
       const totalAmount = reservations.reduce((sum, r) => sum + (r.unitPrice * r.quantity), 0);
 
       // Publish InventoryReserved event
-      await publishEvent('order.events', 'payment.process', {
+      await publishEvent('order.events', 'inventory.reserved', {
         messageId: uuidv4(),
         eventType: 'InventoryReserved',
         orderId,

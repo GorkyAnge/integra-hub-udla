@@ -74,13 +74,13 @@ async function processPayment(data) {
     );
 
     if (isSuccessful) {
-      // Update order status to CONFIRMED
+      // Update order status to RESERVED (payment processing)
       await pool.query(
-        `UPDATE orders.orders SET status = 'CONFIRMED', updated_at = NOW() WHERE id = $1`,
+        `UPDATE orders.orders SET status = 'RESERVED', updated_at = NOW() WHERE id = $1`,
         [orderId]
       );
 
-      // Record order event
+      // Record payment event
       await pool.query(
         `INSERT INTO orders.order_events (order_id, correlation_id, event_type, event_data)
          VALUES ($1, $2, 'PaymentCompleted', $3)`,
@@ -89,6 +89,12 @@ async function processPayment(data) {
           amount: totalAmount,
           reference: gatewayReference 
         })]
+      );
+
+      // Update to CONFIRMED after payment
+      await pool.query(
+        `UPDATE orders.orders SET status = 'CONFIRMED', updated_at = NOW() WHERE id = $1`,
+        [orderId]
       );
 
       await pool.query(

@@ -124,7 +124,31 @@ async function startConsumers() {
       }
     }, { noAck: false });
 
-    logger.info('Order consumers started');
+    // Subscribe to notification fanout to receive order status updates
+    const { queue: notificationQueue } = await channel.assertQueue('', { exclusive: true });
+    await channel.bindQueue(notificationQueue, 'notification.fanout', '');
+    
+    await channel.consume(notificationQueue, async (msg) => {
+      if (msg) {
+        try {
+          const content = JSON.parse(msg.content.toString());
+          logger.info(`Received notification event: ${content.eventType} for order: ${content.orderId}`);
+          
+          // Handle different event types
+          if (content.eventType === 'OrderConfirmed' || content.eventType === 'OrderRejected') {
+            // Event already processed by payment service, just log
+            logger.info(`Order ${content.orderId} status already updated to ${content.eventType}`);
+          }
+          
+          channel.ack(msg);
+        } catch (error) {
+          logger.error(`Error processing notification: ${error.message}`);
+          channel.ack(msg); // Ack anyway to avoid blocking queue
+        }
+      }
+    }, { noAck: false });
+
+    logger.info('Order consumers started (order.process + notification.fanout subscription)');
   } catch (error) {
     logger.error('Failed to start consumers:', error);
     throw error;

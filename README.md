@@ -287,6 +287,20 @@ Este proyecto es parte del trabajo académico del curso de Integración de Siste
 
 ## 🆘 Troubleshooting
 
+### Problema: Kafka falla al iniciar (NodeExists error)
+**Error**: `KeeperErrorCode = NodeExists`
+
+**Causa**: Kafka intentó registrarse en Zookeeper pero el nodo ya existía de una ejecución anterior.
+
+**Solución**:
+```bash
+# Detener y eliminar volúmenes
+docker-compose down -v
+
+# Levantar nuevamente
+docker-compose up -d
+```
+
 ### Problema: Servicios no inician
 ```bash
 # Ver logs detallados
