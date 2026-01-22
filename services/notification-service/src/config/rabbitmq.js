@@ -1,19 +1,47 @@
-const amqp = require('amqplib');
-const logger = require('../utils/logger');
-let connection = null, channel = null;
+const amqp = require("amqplib");
+const logger = require("../utils/logger");
+
+let connection = null;
+let channel = null;
+
+const EXCHANGE = "notifications.fanout";
 
 async function connectRabbitMQ() {
-  connection = await amqp.connect(process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672');
+  connection = await amqp.connect(
+    process.env.RABBITMQ_URL || "amqp://admin:admin123@localhost:5672",
+  );
+
   channel = await connection.createChannel();
   await channel.prefetch(10);
-  logger.info('Connected to RabbitMQ');
-  connection.on('close', () => { logger.warn('RabbitMQ closed'); setTimeout(connectRabbitMQ, 5000); });
+
+  // Fanout exchange
+  await channel.assertExchange(EXCHANGE, "fanout", { durable: true });
+
+  // Queues
+  await channel.assertQueue("notification.customer", { durable: true });
+  await channel.assertQueue("notification.operations", { durable: true });
+
+  // Bind queues to exchange
+  await channel.bindQueue("notification.customer", EXCHANGE, "");
+  await channel.bindQueue("notification.operations", EXCHANGE, "");
+
+  logger.info("Connected to RabbitMQ (Fanout Exchange)");
+
+  connection.on("close", () => {
+    logger.warn("RabbitMQ connection closed. Reconnecting...");
+    setTimeout(connectRabbitMQ, 5000);
+  });
 }
 
-async function startConsumers(handleCustomerNotification, handleOperationsNotification) {
-  // Consumer for customer notifications (Pub/Sub - Fanout)
-  await channel.consume('notification.customer', async (msg) => {
-    if (msg) {
+async function startConsumers(
+  handleCustomerNotification,
+  handleOperationsNotification,
+) {
+  await channel.consume(
+    "notification.customer",
+    async (msg) => {
+      if (!msg) return;
+
       try {
         const content = JSON.parse(msg.content.toString());
         await handleCustomerNotification(content);
@@ -22,12 +50,15 @@ async function startConsumers(handleCustomerNotification, handleOperationsNotifi
         logger.error(`Customer notification error: ${error.message}`);
         channel.nack(msg, false, false);
       }
-    }
-  }, { noAck: false });
+    },
+    { noAck: false },
+  );
 
-  // Consumer for operations notifications (Pub/Sub - Fanout)
-  await channel.consume('notification.operations', async (msg) => {
-    if (msg) {
+  await channel.consume(
+    "notification.operations",
+    async (msg) => {
+      if (!msg) return;
+
       try {
         const content = JSON.parse(msg.content.toString());
         await handleOperationsNotification(content);
@@ -36,10 +67,11 @@ async function startConsumers(handleCustomerNotification, handleOperationsNotifi
         logger.error(`Operations notification error: ${error.message}`);
         channel.nack(msg, false, false);
       }
-    }
-  }, { noAck: false });
+    },
+    { noAck: false },
+  );
 
-  logger.info('Notification consumers started (Customer + Operations)');
+  logger.info("Notification consumers started (Fanout)");
 }
 
 module.exports = { connectRabbitMQ, startConsumers };
