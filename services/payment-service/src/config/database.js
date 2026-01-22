@@ -4,5 +4,14 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL || 'postgresql://integrahub:integrahub123@localhost:5432/integrahub',
   max: 20, idleTimeoutMillis: 30000, connectionTimeoutMillis: 5000,
 });
-async function connectDatabase() { const c = await pool.connect(); logger.info('Connected to PostgreSQL'); c.release(); }
+async function connectDatabase() {
+  try {
+    const c = await pool.connect();
+    logger.info('Connected to PostgreSQL');
+    c.release();
+  } catch (err) {
+    logger.error('PostgreSQL connection error:', err);
+    throw err;
+  }
+}
 module.exports = { pool, connectDatabase };

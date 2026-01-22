@@ -17,24 +17,27 @@ const logger = require('../utils/logger');
  */
 router.get('/', async (req, res) => {
   try {
-    const { status, orderId, limit = 50 } = req.query;
-    
+    const { status, orderId } = req.query;
+    let { limit = 50 } = req.query;
+    limit = parseInt(limit);
+    if (isNaN(limit) || limit < 1) limit = 50;
+
     let query = 'SELECT * FROM payments.transactions WHERE 1=1';
     const params = [];
-    
+
     if (status) {
       params.push(status);
       query += ` AND status = $${params.length}`;
     }
-    
+
     if (orderId) {
       params.push(orderId);
       query += ` AND order_id = $${params.length}`;
     }
-    
-    params.push(parseInt(limit));
+
+    params.push(limit);
     query += ` ORDER BY created_at DESC LIMIT $${params.length}`;
-    
+
     const result = await pool.query(query, params);
     res.json({ transactions: result.rows });
   } catch (error) {
