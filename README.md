@@ -127,7 +127,7 @@ Para documentación detallada de cada patrón, ver: [📋 PATRONES_IMPLEMENTACIO
 
 | Patrón | Dónde se Usa | Por Qué se Usa | Trade-offs |
 |--------|--------------|----------------|------------|
-| **Point-to-Point Channel** | Cola `order.process`, `payment.process` | Procesamiento secuencial garantizado, un solo consumidor activo | ❌ No escala con múltiples consumers<br>✅ Orden garantizado |
+| **Point-to-Point Channel** | Cola `order.process`, `payment.process` | Procesamiento secuencial garantizado, un solo consumidor por mensaje | ❌ Load balancing básico<br>✅ Orden garantizado |
 | **Publish/Subscribe** | Exchange `order.events` (Fanout) | Notificar a múltiples servicios sin acoplamiento | ❌ Todos reciben todo (no hay filtrado)<br>✅ Fácil agregar suscriptores |
 | **Message Router** | Routing keys en Order Service | Dirigir mensajes según tipo de evento | ❌ Requiere conocer routing keys<br>✅ Flexible y escalable |
 | **Message Translator** | Legacy CSV Processor | Transformar CSV legacy a JSON moderno | ❌ Código específico por formato<br>✅ Independencia de sistemas |

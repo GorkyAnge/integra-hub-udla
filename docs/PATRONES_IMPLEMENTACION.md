@@ -82,7 +82,7 @@ await channel.consume('order.process', async (msg) => {
 
 | Ventaja | Desventaja |
 |---------|------------|
-| ✅ Orden garantizado | ❌ No escala horizontalmente con múltiples consumers simultáneos |
+| ✅ Orden garantizado | ❌ Load balancing básico (round-robin) |
 | ✅ Sin duplicados | ❌ Throughput limitado |
 | ✅ Procesamiento consistente | ❌ Single point of failure si hay un solo consumidor |
 
@@ -574,38 +574,43 @@ async function markAsProcessed(idempotencyKey, result, ttl = 86400) {
   );
 }
 
-// 3. Uso en endpoint
-app.post('/api/orders', async (req, res) => {
-  const idempotencyKey = req.headers['idempotency-key'] || uuidv4();
-  
-  // Verificar cache
-  const cached = await checkIdempotency(idempotencyKey);
-  if (cached) {
-    return res.status(200).json(cached); // ✅ Devuelve resultado anterior
+// 3. Uso en consumidor de mensajes RabbitMQ
+await channel.consume('order.process', async (msg) => {
+  if (msg) {
+    const content = JSON.parse(msg.content.toString());
+    const messageId = msg.properties.messageId;
+    
+    // Verificar si ya fue procesado
+    const alreadyProcessed = await isMessageProcessed(messageId);
+    if (alreadyProcessed) {
+      logger.info(`Message ${messageId} already processed, skipping`);
+      channel.ack(msg);
+      return;
+    }
+    
+    // Procesar mensaje
+    const result = await processOrder(content);
+    
+    // Marcar como procesado
+    await markMessageProcessed(messageId);
+    
+    channel.ack(msg);
   }
-  
-  // Procesar nuevo pedido
-  const result = await createOrder(req.body);
-  
-  // Cachear resultado
-  await markAsProcessed(idempotencyKey, result);
-  
-  res.status(201).json(result);
-});
+}, { noAck: false });
 ```
 
-**Ejemplo de mensaje duplicado**:
+**Ejemplo de mensaje duplicado en RabbitMQ**:
 ```
-REQUEST 1: POST /api/orders (messageId: abc-123)
+MESSAGE 1: RabbitMQ message with messageId: abc-123
   → Redis: NO existe 'msg:abc-123'
   → Procesa pedido
   → Redis SET 'msg:abc-123' = '1' (TTL 24h)
-  → Response: 201 Created
+  → ACK message
 
-REQUEST 2: POST /api/orders (messageId: abc-123) [DUPLICADO]
+MESSAGE 2: Mismo mensaje reenviado (messageId: abc-123) [DUPLICADO]
   → Redis: SÍ existe 'msg:abc-123'
   → NO procesa (idempotency hit)
-  → Response: 200 OK (resultado cacheado)
+  → ACK message (evita reprocessamiento)
 ```
 
 ### 🛠️ Herramientas Involucradas
@@ -904,7 +909,7 @@ if (retryCount <= 3) {
 - **Header**: `x-correlation-id`
   - **Order Service**: `services/order-service/src/index.js` (línea 62)
   - **Payment Service**: `services/payment-service/src/index.js` (línea 40)
-  - **Inventory Service**: `services/inventory-service/src/index.js` (línea correspondiente)
+  - **Inventory Service**: `services/inventory-service/src/index.js`
   
 - **Propagación en mensajes**:
   - RabbitMQ properties: `correlationId` field
@@ -1124,8 +1129,11 @@ await publishEvent('order.events', 'order.created', {
 // Solo eventos de inventario críticos
 routing_key: "inventory.critical.*"
 
-// Todos los eventos de pedidos y pagos
-routing_key: "{order,payment}.#"
+// Todos los eventos de pedidos
+routing_key: "order.#"
+
+// Todos los eventos de pagos
+routing_key: "payment.#"
 
 // Eventos de confirmación de cualquier tipo
 routing_key: "*.confirmed"
