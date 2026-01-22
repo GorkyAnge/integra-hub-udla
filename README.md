@@ -121,29 +121,41 @@ docker-compose down
 
 ## 🔧 Patrones de Integración Implementados
 
-### 1. Point-to-Point (Cola)
-- Cola `order.process` para procesamiento secuencial de pedidos
-- Cola `payment.process` para procesamiento de pagos
+Para documentación detallada de cada patrón, ver: [📋 PATRONES_IMPLEMENTACION.md](docs/PATRONES_IMPLEMENTACION.md)
 
-### 2. Publish/Subscribe (Fanout)
-- Exchange `order.events` para notificar múltiples suscriptores
-- Exchange `notification.fanout` para operaciones y clientes
+### Resumen de Patrones
 
-### 3. Message Router (Content-Based)
-- Enrutamiento basado en tipo de evento (OrderCreated, OrderConfirmed, OrderRejected)
-- Headers exchange para ruteo por metadata
+| Patrón | Dónde se Usa | Por Qué se Usa | Trade-offs |
+|--------|--------------|----------------|------------|
+| **Point-to-Point Channel** | Cola `order.process`, `payment.process` | Procesamiento secuencial garantizado, un solo consumidor activo | ❌ No escala con múltiples consumers<br>✅ Orden garantizado |
+| **Publish/Subscribe** | Exchange `order.events` (Fanout) | Notificar a múltiples servicios sin acoplamiento | ❌ Todos reciben todo (no hay filtrado)<br>✅ Fácil agregar suscriptores |
+| **Message Router** | Routing keys en Order Service | Dirigir mensajes según tipo de evento | ❌ Requiere conocer routing keys<br>✅ Flexible y escalable |
+| **Message Translator** | Legacy CSV Processor | Transformar CSV legacy a JSON moderno | ❌ Código específico por formato<br>✅ Independencia de sistemas |
+| **Dead Letter Channel** | Cola `orders.dlq` | Manejar mensajes que fallan repetidamente | ❌ Requiere monitoreo de DLQ<br>✅ No pierde mensajes |
+| **Idempotent Consumer** | Redis cache en Order Service | Evitar procesamiento duplicado de pedidos | ❌ Dependencia de Redis<br>✅ Garantiza exactly-once |
+| **Circuit Breaker** | Opossum en Order Service | Proteger contra caídas de servicios externos | ❌ Requiere ajuste de thresholds<br>✅ Previene cascading failures |
+| **Retry with Backoff** | async-retry en Payment Service | Reintentar operaciones transitorias fallidas | ❌ Aumenta latencia en fallos<br>✅ Tolera errores temporales |
+| **Correlation Identifier** | Header `x-correlation-id` | Trazar requests end-to-end en logs | ❌ Debe propagarse manualmente<br>✅ Debugging facilitado |
+| **Content-Based Router** | RabbitMQ topic exchange | Ruteo basado en routing key patterns | ❌ Complejidad en bindings<br>✅ Filtrado fino de mensajes |
 
-### 4. Message Translator
-- DTOs internos vs externos
-- Mapeo de eventos entre servicios
+## 🔧 Patrones de Integración Implementados
 
-### 5. Dead Letter Channel (DLQ)
-- Cola `orders.dlq` para mensajes fallidos
-- Reintentos automáticos con backoff exponencial
+Para documentación detallada de cada patrón, ver: [📋 PATRONES_IMPLEMENTACION.md](docs/PATRONES_IMPLEMENTACION.md)
 
-### 6. Idempotent Consumer
-- Cache Redis con `messageId` para evitar duplicados
-- TTL configurable para expiración
+### Resumen de Patrones
+
+| Patrón | Dónde se Usa | Por Qué se Usa | Trade-offs |
+|--------|--------------|----------------|------------|
+| **Point-to-Point Channel** | Cola `order.process`, `payment.process` | Procesamiento secuencial garantizado, un solo consumidor activo | ❌ No escala con múltiples consumers<br>✅ Orden garantizado |
+| **Publish/Subscribe** | Exchange `order.events` (Fanout) | Notificar a múltiples servicios sin acoplamiento | ❌ Todos reciben todo (no hay filtrado)<br>✅ Fácil agregar suscriptores |
+| **Message Router** | Routing keys en Order Service | Dirigir mensajes según tipo de evento | ❌ Requiere conocer routing keys<br>✅ Flexible y escalable |
+| **Message Translator** | Legacy CSV Processor | Transformar CSV legacy a JSON moderno | ❌ Código específico por formato<br>✅ Independencia de sistemas |
+| **Dead Letter Channel** | Cola `orders.dlq` | Manejar mensajes que fallan repetidamente | ❌ Requiere monitoreo de DLQ<br>✅ No pierde mensajes |
+| **Idempotent Consumer** | Redis cache en Order Service | Evitar procesamiento duplicado de pedidos | ❌ Dependencia de Redis<br>✅ Garantiza exactly-once |
+| **Circuit Breaker** | Opossum en Order Service | Proteger contra caídas de servicios externos | ❌ Requiere ajuste de thresholds<br>✅ Previene cascading failures |
+| **Retry with Backoff** | async-retry en Payment Service | Reintentar operaciones transitorias fallidas | ❌ Aumenta latencia en fallos<br>✅ Tolera errores temporales |
+| **Correlation Identifier** | Header `x-correlation-id` | Trazar requests end-to-end en logs | ❌ Debe propagarse manualmente<br>✅ Debugging facilitado |
+| **Content-Based Router** | RabbitMQ topic exchange | Ruteo basado en routing key patterns | ❌ Complejidad en bindings<br>✅ Filtrado fino de mensajes |
 
 ---
 

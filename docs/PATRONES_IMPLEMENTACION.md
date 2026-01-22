@@ -902,7 +902,7 @@ if (retryCount <= 3) {
 ### 📍 Dónde se Usa
 
 - **Header**: `x-correlation-id`
-  - **Order Service**: `services/order-service/src/index.js` (línea 50)
+  - **Order Service**: `services/order-service/src/index.js` (línea 62)
   - **Payment Service**: `services/payment-service/src/index.js` (línea 40)
   - **Inventory Service**: `services/inventory-service/src/index.js` (línea correspondiente)
   
@@ -957,15 +957,10 @@ Logs agregados:
 
 **Middleware HTTP**:
 ```javascript
-// services/order-service/src/index.js (líneas 49-53)
+// services/order-service/src/index.js (líneas 61-65)
 app.use((req, res, next) => {
   req.correlationId = req.headers['x-correlation-id'] || require('uuid').v4();
   res.setHeader('X-Correlation-ID', req.correlationId);
-  logger.info('Request received', { 
-    correlationId: req.correlationId,
-    method: req.method,
-    path: req.path
-  });
   next();
 });
 ```
