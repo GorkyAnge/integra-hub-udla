@@ -1,5 +1,19 @@
 # IntegraHub - Documentación de Patrones de Integración
 
+## 📖 Documentación Completa
+
+Para documentación detallada de cada patrón de integración, incluyendo:
+- Ubicación exacta en el código
+- Cómo funciona cada patrón
+- Flujo de datos completo
+- Ejemplos de código
+- Herramientas involucradas
+- Trade-offs y decisiones de diseño
+
+👉 **Ver**: [📋 PATRONES_IMPLEMENTACION.md](PATRONES_IMPLEMENTACION.md)
+
+---
+
 ## 📋 Matriz de Patrones Implementados
 
 | Patrón | Ubicación | Descripción |
